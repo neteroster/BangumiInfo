@@ -51,19 +51,20 @@ class Bangumi:
         if self.info_box != None: return self.info_box
         self.info_box = {}
 
+
         for element in self.soup.find(id="infobox").children:
             if element.get_text().strip() == '': continue
 
             splited_e = element.get_text().strip().split(": ")
 
-            self.info_box[splited_e[0]] = []
+            if not splited_e[0] in self.info_box: self.info_box[splited_e[0]] = []
 
             for i in splited_e[1].split("、"):
                 self.info_box[splited_e[0]].append(i)
         return self.info_box
 
 
-i = Bangumi(id = "845")
+i = Bangumi(id = "45938")
 
 print(i.get_infobox())
 
