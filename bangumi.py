@@ -7,7 +7,7 @@ SUBJECT_URL = "https://bgm.tv/subject/"
 class Bangumi:
     def __init__(self, id: str):
         self.id = id
-        self.url = SUBJECT_URL + str(id);
+        self.url = SUBJECT_URL + id
 
         reqst = requests.get(self.url, headers=REQUEST_HEADER)
         reqst.encoding = 'utf-8'
@@ -63,7 +63,7 @@ class Bangumi:
         return self.info_box
 
 
-i = Bangumi(id = 845)
+i = Bangumi(id = "845")
 
 print(i.get_infobox())
 
