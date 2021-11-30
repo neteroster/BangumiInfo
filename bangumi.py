@@ -1,3 +1,4 @@
+import bs4
 from bs4 import BeautifulSoup
 import requests
 
@@ -21,6 +22,9 @@ class Bangumi:
 
         # Information box
         self.info_box = None
+
+        # Related work
+        self.related = None
 
     def get_raw_page(self):
         return self.raw_text
@@ -52,7 +56,7 @@ class Bangumi:
         self.info_box = {}
 
 
-        for element in self.soup.find(id="infobox").children:
+        for element in self.soup.find(id="infobox").contents:
             if element.get_text().strip() == '': continue
 
             splited_e = element.get_text().strip().split(": ")
@@ -63,10 +67,49 @@ class Bangumi:
                 self.info_box[splited_e[0]].append(i)
         return self.info_box
 
+    def get_related(self):
+        if self.related != None: return self.related
+        self.related = {}
 
-i = Bangumi(id = "45938")
+        def is_a_related_sub(tag):
+            return tag.has_attr("class") and tag.attrs["class"][0] == "sub"
 
-print(i.get_infobox())
+        last_sub_type = ""
+        for element in self.soup.find_all(is_a_related_sub):
+            if element.string != None:
+                last_sub_type = element.string
+                self.related[last_sub_type] = []
+
+
+            for down_element in element.next_siblings:
+                if type(down_element) != bs4.element.Tag or down_element.attrs["class"][0] != "title": continue
+                if down_element.attrs["class"] == "sep": break
+
+                self.related[last_sub_type].append({"title": down_element.string, "id": down_element.attrs["href"].split('/')[2]})
+
+#                self.related[element.string]["title"] = down_element.string
+#                self.related[element.string]["id"] = down_element.attrs["href"].split('/')[2]
+        return self.related
+
+    def refresh_and_clean(self):
+
+        reqst = requests.get(self.url, headers=REQUEST_HEADER)
+        reqst.encoding = 'utf-8'
+        self.raw_text = reqst.text
+        self.soup = BeautifulSoup(self.raw_text, 'html.parser')
+        
+        # Basic infomation
+        self.summary = None
+        self.original_name = None
+        self.score = None
+
+        # Information box
+        self.info_box = None
+
+
+i = Bangumi(id = "22423")
+
+print(i.get_related())
 
 
 
