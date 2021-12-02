@@ -19,7 +19,7 @@ namespace TestPj1
         private string? originalName;
         private string? score;
 
-        private Dictionary<string, string[]>? infoBox;
+        private Dictionary<string, List<string>>? infoBox;
 
         private Dictionary<string, List<Dictionary<string, string>>>? relatedWorks;
 
@@ -42,6 +42,16 @@ namespace TestPj1
             infoBox = null;
             relatedWorks = null;
 
+        }
+
+        public void Clean()
+        {
+            summary = null;
+            originalName = null;
+            score = null;
+
+            infoBox = null;
+            relatedWorks = null;
         }
 
         public string GetRawPage()
@@ -88,12 +98,12 @@ namespace TestPj1
             return summary;
         }
 
-        public Dictionary<string, string[]> GetInfoBox()
+        public Dictionary<string, List<string>> GetInfoBox()
         {
             if (infoBox != null)
                 return infoBox;
 
-            infoBox = new Dictionary<string, string[]>();
+            infoBox = new Dictionary<string, List<string>>();
             var infoList = bangumiDoc.DocumentNode
                 .SelectSingleNode("//descendant::ul[@id='infobox']");
 
@@ -105,7 +115,12 @@ namespace TestPj1
                 string subType = innerTxt.Split(": ")[0];
                 string[] subContent = innerTxt.Split(": ")[1].Split("、");
 
-                infoBox.Add(subType, subContent);
+                if (!infoBox.ContainsKey(subType))
+                {
+                    infoBox.Add(subType, subContent.ToList());
+                    continue;
+                }
+                infoBox[subType].AddRange(subContent.ToList());
             }
             return infoBox;
         }
