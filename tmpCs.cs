@@ -315,7 +315,7 @@ namespace TestPj1
                     );
             }
 
-            return null;
+            return musicList;
         }
     }
 }
