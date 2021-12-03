@@ -35,7 +35,7 @@ namespace TestPj1
 
         private Dictionary<string, List<SingleRelatedWork>>? relatedWorks;
 
-        public class DetailedScore
+        public class DetailedScore // Fix Constructor
         {
             /*
              * The Structure of `DetailedScore`:
@@ -70,7 +70,7 @@ namespace TestPj1
         private List<SingleSubjectTag>? subjectTag;
 
         private HtmlWeb bangumiWeb;
-        private HtmlDocument bangumiDoc;
+        protected HtmlDocument bangumiDoc;
 
         public BangumiSubject(string bgmId)
         {
@@ -245,6 +245,77 @@ namespace TestPj1
             }
 
             return subjectTag;
+        }
+    }
+
+    internal class BangumiMusicSubject: BangumiSubject
+    {
+        public class SingleSong
+        {
+            public string title;
+            public string epId;
+
+            public SingleSong(string titleInput, string epIdInput)
+            {
+                title = titleInput;
+                epId = epIdInput;
+            }
+        }
+
+        public class MusicDisc
+        {
+            public string title;
+            public List<SingleSong> songs;
+            public MusicDisc(string titleInput, List<SingleSong> songsInput)
+            {
+                songs = songsInput;
+                title = titleInput;
+            }
+
+        }
+
+        public class MusicList
+        {
+            public List<MusicDisc> musicDiscs;
+            public MusicList(List<MusicDisc> musicDiscsInput)
+            {
+                musicDiscs = musicDiscsInput;
+            }
+
+        }
+        private MusicList? musicList;
+        public BangumiMusicSubject(string bgmMusicId) : base(bgmMusicId)
+        {
+            musicList = null;
+        }
+
+        public MusicList GetMusicList()
+        {
+            if (musicList != null)
+                return musicList;
+
+            var discNodes = bangumiDoc.DocumentNode
+                .SelectNodes("//ul[@class='line_list line_list_music']/li");
+
+            musicList = new MusicList(new List<MusicDisc>());
+            foreach (var child in discNodes)
+            {
+                if (child.HasClass("cat"))
+                {
+                    musicList.musicDiscs.Add(new MusicDisc(child.InnerText, new List<SingleSong>()));
+                    continue;
+                }
+                musicList.musicDiscs.Last().songs.Add(
+                    new SingleSong(
+                        child.ChildNodes[3].InnerText
+                        .Trim().Split(' ', 2)[1],
+                        child.ChildNodes[3].ChildNodes[1].Attributes["href"].Value
+                        .Split('/')[2]
+                        )
+                    );
+            }
+
+            return null;
         }
     }
 }
