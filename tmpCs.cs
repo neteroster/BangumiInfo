@@ -19,21 +19,68 @@ namespace TestPj1
         private string? originalName;
         private string? averageScore;
 
-        private Dictionary<string, List<string>>? infoBox;
-
-        public class SingleRelatedWork
+        public class InfoBox
         {
-            public string title;
-            public string id;
-
-            public SingleRelatedWork(string titleInput, string idInput)
+            public class SingleInfoObject
             {
-                title = titleInput;
-                id = idInput;
+                public string title;
+                public List<string> content;
+
+                public SingleInfoObject(string titleInput, List<string> contentInput)
+                {
+                    title = titleInput;
+                    content = contentInput;
+                }
+            }
+            public List<SingleInfoObject> infoObjects;
+
+            public InfoBox(List<SingleInfoObject> infoObjectsInput)
+            {
+                infoObjects = infoObjectsInput;
             }
         }
 
-        private Dictionary<string, List<SingleRelatedWork>>? relatedWorks;
+        private InfoBox? infoBox;
+
+
+
+        public class RelatedWorks
+        {
+            public class SingleTypeRalatedWork
+            {
+                public class SingleRelatedWork
+                {
+                    public string title;
+                    public string id;
+
+                    public SingleRelatedWork(string titleInput, string idInput)
+                    {
+                        title = titleInput;
+                        id = idInput;
+                    }
+
+                }
+
+                public string worksType;
+                public List<SingleRelatedWork> singleTypeRelatedWorks;
+
+                public SingleTypeRalatedWork(string worksTypeInput, List<SingleRelatedWork> inputSingleTypeRelatedWorks)
+                {
+                    worksType = worksTypeInput;
+                    singleTypeRelatedWorks = inputSingleTypeRelatedWorks;
+                }
+            }
+
+
+            public List<SingleTypeRalatedWork> relatedWorks;
+            
+            public RelatedWorks(List<SingleTypeRalatedWork> ralatedWorksInput)
+            {
+                relatedWorks = ralatedWorksInput;
+            }
+        }
+
+        private RelatedWorks? relatedWorks;
 
         public class DetailedScore // Fix Constructor
         {
@@ -137,12 +184,12 @@ namespace TestPj1
             return summary;
         }
 
-        public Dictionary<string, List<string>> GetInfoBox()
+        public InfoBox GetInfoBox()
         {
             if (infoBox != null)
                 return infoBox;
 
-            infoBox = new Dictionary<string, List<string>>();
+            infoBox = new InfoBox(new List<InfoBox.SingleInfoObject>());
             var infoList = bangumiDoc.DocumentNode
                 .SelectSingleNode("//descendant::ul[@id='infobox']");
 
@@ -154,21 +201,26 @@ namespace TestPj1
                 string subType = innerTxt.Split(": ")[0];
                 string[] subContent = innerTxt.Split(": ")[1].Split("、");
 
-                if (!infoBox.ContainsKey(subType))
+                if (!infoBox.infoObjects.Exists(obj => obj.title == subType))
                 {
-                    infoBox.Add(subType, subContent.ToList());
+                    infoBox.infoObjects.Add(new InfoBox.SingleInfoObject(
+                        subType,
+                        subContent.ToList()
+                        ));
                     continue;
                 }
-                infoBox[subType].AddRange(subContent.ToList());
+                infoBox.infoObjects.Find(obj => obj.title == subType)!
+                    .content
+                    .AddRange(subContent.ToList());
             }
             return infoBox;
         }
 
-        public Dictionary<string, List<SingleRelatedWork>> GetRelated()
+        public RelatedWorks GetRelated()
         {
             if (relatedWorks != null)
                 return relatedWorks;
-            relatedWorks = new Dictionary<string, List<SingleRelatedWork>>();
+            relatedWorks = new RelatedWorks(new List<RelatedWorks.SingleTypeRalatedWork>());
 
             var nearNode = bangumiDoc.DocumentNode
                 .SelectSingleNode("//descendant::div[@class='content_inner']");
@@ -180,8 +232,11 @@ namespace TestPj1
                     var subType = desNode.InnerText;
                     lastSubType = subType;
 
-                    if (!relatedWorks.ContainsKey(subType))
-                        relatedWorks.Add(subType, new List<SingleRelatedWork>());
+                    if (!relatedWorks.relatedWorks.Exists(obj => obj.worksType == lastSubType))
+                        relatedWorks.relatedWorks
+                            .Add(new RelatedWorks.SingleTypeRalatedWork(
+                                lastSubType, new List<RelatedWorks.SingleTypeRalatedWork.SingleRelatedWork>()
+                                ));
                     continue;
                 }
                 if (!desNode.HasClass("title")) continue;
@@ -190,8 +245,8 @@ namespace TestPj1
                     .Split('/')[2];
                 var subTitle = desNode.InnerText;
 
-                relatedWorks[lastSubType]
-                    .Add(new SingleRelatedWork(subTitle, subId));
+                relatedWorks.relatedWorks.Find(obj => obj.worksType == lastSubType)!.singleTypeRelatedWorks
+                    .Add(new RelatedWorks.SingleTypeRalatedWork.SingleRelatedWork(subTitle, subId));
             }
 
             return relatedWorks;
@@ -250,32 +305,30 @@ namespace TestPj1
 
     internal class BangumiMusicSubject: BangumiSubject
     {
-        public class SingleSong
-        {
-            public string title;
-            public string epId;
-
-            public SingleSong(string titleInput, string epIdInput)
-            {
-                title = titleInput;
-                epId = epIdInput;
-            }
-        }
-
-        public class MusicDisc
-        {
-            public string title;
-            public List<SingleSong> songs;
-            public MusicDisc(string titleInput, List<SingleSong> songsInput)
-            {
-                songs = songsInput;
-                title = titleInput;
-            }
-
-        }
-
         public class MusicList
         {
+            public class MusicDisc
+            {
+                public class SingleSong
+                {
+                    public string title;
+                    public string epId;
+
+                    public SingleSong(string titleInput, string epIdInput)
+                    {
+                        title = titleInput;
+                        epId = epIdInput;
+                    }
+                }
+                public string title;
+                public List<SingleSong> songs;
+                public MusicDisc(string titleInput, List<SingleSong> songsInput)
+                {
+                    songs = songsInput;
+                    title = titleInput;
+                }
+
+            }
             public List<MusicDisc> musicDiscs;
             public MusicList(List<MusicDisc> musicDiscsInput)
             {
@@ -297,16 +350,16 @@ namespace TestPj1
             var discNodes = bangumiDoc.DocumentNode
                 .SelectNodes("//ul[@class='line_list line_list_music']/li");
 
-            musicList = new MusicList(new List<MusicDisc>());
+            musicList = new MusicList(new List<MusicList.MusicDisc>());
             foreach (var child in discNodes)
             {
                 if (child.HasClass("cat"))
                 {
-                    musicList.musicDiscs.Add(new MusicDisc(child.InnerText, new List<SingleSong>()));
+                    musicList.musicDiscs.Add(new MusicList.MusicDisc(child.InnerText, new List<MusicList.MusicDisc.SingleSong>()));
                     continue;
                 }
                 musicList.musicDiscs.Last().songs.Add(
-                    new SingleSong(
+                    new MusicList.MusicDisc.SingleSong(
                         child.ChildNodes[3].InnerText
                         .Trim().Split(' ', 2)[1],
                         child.ChildNodes[3].ChildNodes[1].Attributes["href"].Value
