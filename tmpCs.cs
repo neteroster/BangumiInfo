@@ -8,7 +8,7 @@ using HtmlAgilityPack;
 
 namespace TestPj1
 {
-    internal class BangumiInfo
+    internal class BangumiSubject
     {
         public const string SUBJECTURL = "https://bgm.tv/subject/";
 
@@ -17,16 +17,62 @@ namespace TestPj1
 
         private string? summary;
         private string? originalName;
-        private string? score;
+        private string? averageScore;
 
         private Dictionary<string, List<string>>? infoBox;
 
-        private Dictionary<string, List<Dictionary<string, string>>>? relatedWorks;
+        public class SingleRelatedWork
+        {
+            public string title;
+            public string id;
+
+            public SingleRelatedWork(string titleInput, string idInput)
+            {
+                title = titleInput;
+                id = idInput;
+            }
+        }
+
+        private Dictionary<string, List<SingleRelatedWork>>? relatedWorks;
+
+        public class DetailedScore
+        {
+            /*
+             * The Structure of `DetailedScore`:
+             * (uint) totalVotes: The total number of people who vote this subject.
+             * (uint[]) allScoreVotes: The number of people who vote 1, 2, 3 .. 9, 10.
+             */
+            public uint totalVotes;
+            public uint[] allScoreVotes;
+
+            public DetailedScore()
+            {
+                totalVotes = 0;
+                allScoreVotes = new uint[10];
+            }
+
+        }
+
+        private DetailedScore? detailedScore;
+
+        public class SingleSubjectTag
+        {
+            public string title;
+            public uint number;
+
+            public SingleSubjectTag(string titleInput, uint numberInput)
+            {
+                title = titleInput;
+                number = numberInput;
+            }
+        }
+
+        private List<SingleSubjectTag>? subjectTag;
 
         private HtmlWeb bangumiWeb;
         private HtmlDocument bangumiDoc;
 
-        public BangumiInfo(string bgmId)
+        public BangumiSubject(string bgmId)
         {
             id = bgmId;
             url = SUBJECTURL + id;
@@ -37,21 +83,14 @@ namespace TestPj1
 
             summary = null;
             originalName = null;
-            score = null;
+            averageScore = null;
 
             infoBox = null;
             relatedWorks = null;
 
-        }
+            detailedScore = null;
+            subjectTag = null;
 
-        public void Clean()
-        {
-            summary = null;
-            originalName = null;
-            score = null;
-
-            infoBox = null;
-            relatedWorks = null;
         }
 
         public string GetRawPage()
@@ -72,17 +111,17 @@ namespace TestPj1
             return originalName;
         }
 
-        public string GetScore()
+        public string GetAverageScore()
         {
-            if (score != null)
-                return score;
+            if (averageScore != null)
+                return averageScore;
 
-            score = bangumiDoc.DocumentNode
+            averageScore = bangumiDoc.DocumentNode
                 .SelectSingleNode("//span[@class='number']")
                 .InnerText
                 .Trim();
 
-            return score;
+            return averageScore;
         }
 
         public string GetSummary()
@@ -125,11 +164,11 @@ namespace TestPj1
             return infoBox;
         }
 
-        public Dictionary<string, List<Dictionary<string, string>>> GetRelated()
+        public Dictionary<string, List<SingleRelatedWork>> GetRelated()
         {
             if (relatedWorks != null)
                 return relatedWorks;
-            relatedWorks = new Dictionary<string, List<Dictionary<string, string>>>();
+            relatedWorks = new Dictionary<string, List<SingleRelatedWork>>();
 
             var nearNode = bangumiDoc.DocumentNode
                 .SelectSingleNode("//descendant::div[@class='content_inner']");
@@ -142,7 +181,7 @@ namespace TestPj1
                     lastSubType = subType;
 
                     if (!relatedWorks.ContainsKey(subType))
-                        relatedWorks.Add(subType, new List<Dictionary<string, string>>());
+                        relatedWorks.Add(subType, new List<SingleRelatedWork>());
                     continue;
                 }
                 if (!desNode.HasClass("title")) continue;
@@ -152,16 +191,60 @@ namespace TestPj1
                 var subTitle = desNode.InnerText;
 
                 relatedWorks[lastSubType]
-                    .Add(
-                    new Dictionary<string, string>
-                    {
-                        { "id", subId }, { "title", subTitle }
-                    }
-                    );
+                    .Add(new SingleRelatedWork(subTitle, subId));
             }
 
             return relatedWorks;
             
+        }
+
+        public DetailedScore GetDetailedScore()
+        {
+            if (detailedScore != null)
+                return detailedScore;
+
+            detailedScore = new DetailedScore();
+
+            var scoreNode = bangumiDoc.DocumentNode
+                .SelectNodes("//descendant::span[@class='count']");
+
+            var count = 9;
+            foreach (var subNode in scoreNode)
+            {
+                detailedScore.allScoreVotes[count] = Convert.ToUInt32(
+                    subNode.InnerText.Trim('(', ')')
+                    );
+                count--;
+            }
+
+            foreach (var score in detailedScore.allScoreVotes)
+            {
+                detailedScore.totalVotes += score;
+            }
+            return detailedScore;
+        }
+
+        public List<SingleSubjectTag> GetTags()
+        {
+            if (subjectTag != null)
+                return subjectTag;
+
+            subjectTag = new List<SingleSubjectTag>();
+
+            var tagNode = bangumiDoc.DocumentNode
+                .SelectNodes("//descendant::div[@class='inner']")[1];
+
+            foreach (var subNode in tagNode.ChildNodes)
+            {
+                subjectTag.Add(
+                    new SingleSubjectTag(
+                        subNode.ChildNodes[0].InnerText,
+                        Convert.ToUInt32(subNode.ChildNodes[2].InnerText)
+                        )
+                    );
+            }
+
+            return subjectTag;
         }
     }
 }
